@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Sub-collections under user
+      match /{collection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+
+        match /{subDoc=**} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+
+    // Shared exercise library — read by anyone authenticated, write only by admin
+    match /exercises/{exerciseId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Admin only via Firebase Admin SDK
+    }
+
+    // Shared food database — read by anyone authenticated
+    match /foods/{foodId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}
