@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Forge — App Prototype</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="forge-tokens.css"/>
+
+<style>
+  html, body { margin: 0; padding: 0; background: #ECE7DD; }
+  body { font-family: 'Inter', system-ui, sans-serif; }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="browser-window.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="forge-components.jsx"></script>
+<script type="text/babel" src="forge-mobile.jsx"></script>
+<script type="text/babel" src="forge-web.jsx"></script>
+<script type="text/babel" src="forge-add-exercise.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "view": "both"
+}/*EDITMODE-END*/;
+
+// Mobile artboard wrapper — iOS frame at consistent size.
+function MobileBoard({ children }) {
+  return (
+    <div style={{
+      width: '100%', height: '100%', display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      background: '#0B0F14',
+    }}>
+      <IOSDevice width={360} height={760} dark={true}>
+        {children}
+      </IOSDevice>
+    </div>
+  );
+}
+
+// Web artboard wrapper — browser window chrome at full artboard size.
+function WebBoard({ url, children }) {
+  return (
+    <ChromeWindow
+      width="100%"
+      height="100%"
+      url={url || 'forge.app/dashboard'}
+      tabs={[{ title: 'Forge — ' + (url || '').split('/').pop(), active: true }]}>
+      <div style={{ width: '100%', height: '100%', background: '#0B0F14' }}>{children}</div>
+    </ChromeWindow>
+  );
+}
+
+function ForgeApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const showMobile = t.view !== 'web';
+  const showWeb    = t.view !== 'mobile';
+
+  // Mobile screens: 9
+  const mobileScreens = [
+    { id: 'onboarding', label: '01 · Onboarding',     comp: <MobileOnboarding/> },
+    { id: 'dashboard',  label: '02 · Dashboard',      comp: <MobileDashboard/> },
+    { id: 'workout',    label: '03 · Workout',        comp: <MobileWorkout/> },
+    { id: 'diet',       label: '04 · Diet & Meals',   comp: <MobileDiet/> },
+    { id: 'progress',   label: '05 · Progress',       comp: <MobileProgress/> },
+    { id: 'profile',    label: '06 · Profile',        comp: <MobileProfile/> },
+    { id: 'badges',     label: '07 · Forge / Badges', comp: <MobileBadges/> },
+    { id: 'notifs',     label: '08 · Notifications',  comp: <MobileNotifications/> },
+    { id: 'library',    label: '09 · Library',        comp: <MobileLibrary/> },
+  ];
+
+  // Add Exercise flow (mobile, 3 states)
+  const addExerciseMobile = [
+    { id: 'add-search', label: 'A · Search · API list',  comp: <MobileAddSearch/> },
+    { id: 'add-empty',  label: 'B · No results · CTA',   comp: <MobileAddEmpty/> },
+    { id: 'add-custom', label: 'C · Forge custom',       comp: <MobileAddCustom/> },
+  ];
+
+  // Web screens: 6
+  const webScreens = [
+    { id: 'web-dashboard', label: 'Dashboard',  url: 'forge.app/dashboard',           comp: <WebDashboard/> },
+    { id: 'web-workout',   label: 'Workout',    url: 'forge.app/workouts/today',      comp: <WebWorkout/> },
+    { id: 'web-diet',      label: 'Diet',       url: 'forge.app/meals',               comp: <WebDiet/> },
+    { id: 'web-progress',  label: 'Progress',   url: 'forge.app/progress',            comp: <WebProgress/> },
+    { id: 'web-badges',    label: 'Forge',      url: 'forge.app/forge',               comp: <WebBadges/> },
+    { id: 'web-library',   label: 'Library',    url: 'forge.app/library',             comp: <WebLibrary/> },
+    { id: 'web-add',       label: 'Add Exercise · modal', url: 'forge.app/workouts/today?add', comp: <WebAddExercise/> },
+  ];
+
+  // Brand spec card content
+  const brandPalette = [
+    { l: 'BG · 0',   v: '#0B0F14' },
+    { l: 'BG · 1',   v: '#121826' },
+    { l: 'BG · 2',   v: '#1A2233' },
+    { l: 'ACCENT',   v: '#F97316' },
+    { l: 'MUTED',    v: '#C2500A' },
+    { l: 'SUCCESS',  v: '#5ED19A' },
+    { l: 'WARNING',  v: '#F0B86E' },
+    { l: 'ERROR',    v: '#E26D6D' },
+    { l: 'TEXT',     v: '#E6EAF2' },
+    { l: 'TEXT MID', v: '#AAB0C0' },
+    { l: 'TEXT DIM', v: '#7B8193' },
+    { l: 'LINE',     v: 'rgba(255,255,255,0.06)' },
+  ];
+
+  return (
+    <>
+      <DesignCanvas>
+        {/* ───── Brand & system ───── */}
+        <DCSection id="brand" title="Forge — Brand & System" subtitle="Tokens, type, and the visual DNA that ties every screen together">
+          <DCArtboard id="logo" label="Logo · placeholder" width={520} height={420}>
+            <div className="forge" style={{ width: '100%', height: '100%', background: '#0B0F14', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(60% 50% at 50% 70%, rgba(249,115,22,0.35), transparent 70%)',
+              }}/>
+              <div style={{ position: 'relative' }}>
+                <ForgeLogo size={64}/>
+              </div>
+              <div style={{
+                marginTop: 18, fontFamily: 'Inter, sans-serif', fontSize: 13,
+                color: '#AAB0C0', letterSpacing: '0.18em', textTransform: 'uppercase',
+                position: 'relative',
+              }}>Forge your natural body</div>
+              <div style={{
+                position: 'absolute', bottom: 16, left: 16, right: 16,
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 10,
+                color: '#7B8193', display: 'flex', justifyContent: 'space-between',
+              }}>
+                <span>// PLACEHOLDER · DM SANS WORDMARK</span>
+                <span>v0.1</span>
+              </div>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="palette" label="Color palette" width={520} height={420}>
+            <div className="forge" style={{ width: '100%', height: '100%', background: '#0B0F14', padding: 24, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#F97316', letterSpacing: '0.18em', marginBottom: 4 }}>// COLOR TOKENS</div>
+              <h2 style={{ fontSize: 22, fontFamily: 'DM Sans, sans-serif', fontWeight: 700, color: '#E6EAF2', letterSpacing: '-0.02em', marginBottom: 18 }}>Dark · Forge fire</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, flex: 1 }}>
+                {brandPalette.map(c => (
+                  <div key={c.l} style={{
+                    background: c.v.startsWith('rgba') ? 'rgba(255,255,255,0.04)' : c.v,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 10, padding: 10,
+                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                    minHeight: 60,
+                  }}>
+                    <div style={{
+                      fontSize: 9, fontFamily: 'JetBrains Mono, monospace',
+                      color: c.l === 'TEXT' || c.l === 'TEXT MID' || c.l === 'BG · 0' ? '#7B8193' : 'rgba(255,255,255,0.6)',
+                      letterSpacing: '0.1em',
+                    }}>{c.l}</div>
+                    <div style={{
+                      fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+                      color: ['ACCENT','MUTED','SUCCESS','WARNING','ERROR'].includes(c.l) ? '#1a0a00' : '#E6EAF2',
+                    }}>{c.v.length > 12 ? c.v.slice(0, 12) + '…' : c.v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="type" label="Type system" width={520} height={420}>
+            <div className="forge" style={{ width: '100%', height: '100%', background: '#0B0F14', padding: 24, color: '#E6EAF2' }}>
+              <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#F97316', letterSpacing: '0.18em', marginBottom: 4 }}>// TYPE</div>
+              <h2 style={{ fontSize: 22, fontFamily: 'DM Sans, sans-serif', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 18 }}>DM Sans · Inter · JetBrains Mono</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 9, color: '#7B8193', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>DM SANS · 700 · DISPLAY</div>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 40, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 2 }}>Forge your<br/><span style={{ color: '#F97316' }}>natural body.</span></div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, color: '#7B8193', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>DM SANS · 700 · NUMBERS</div>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', marginTop: 4 }}>
+                    <span className="num" style={{ fontSize: 44, fontFamily: 'DM Sans, sans-serif', fontWeight: 700, letterSpacing: '-0.03em' }}>1,820</span>
+                    <span className="num" style={{ fontSize: 28 }}>185 lb</span>
+                    <span className="num" style={{ fontSize: 18, color: '#F97316' }}>+5</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, color: '#7B8193', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>INTER · 400 · BODY</div>
+                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#AAB0C0', marginTop: 2, lineHeight: 1.5 }}>
+                    Train, eat, and track progress without shortcuts. Built for lifters who do it clean.
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 9, color: '#7B8193', fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em' }}>JETBRAINS MONO · 500 · DATA</div>
+                  <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#F97316', letterSpacing: '0.1em', marginTop: 4 }}>SESSION · 32:14 · 8,420 lb · LVL 7</div>
+                </div>
+              </div>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="components" label="Components" width={520} height={420}>
+            <div className="forge" style={{ width: '100%', height: '100%', background: '#0B0F14', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#7B8193', letterSpacing: '0.1em', marginBottom: 8 }}>BUTTONS</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <FButton>Start</FButton>
+                  <FButton variant="ghost">Cancel</FButton>
+                  <FButton variant="soft">+ Add</FButton>
+                  <FButton variant="danger">Delete</FButton>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#7B8193', letterSpacing: '0.1em', marginBottom: 8 }}>BADGES</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <FBadge>Default</FBadge>
+                  <FBadge tone="accent">PR</FBadge>
+                  <FBadge tone="ok">+5 lb</FBadge>
+                  <FBadge tone="warn">Pending</FBadge>
+                  <FBadge tone="err">Missed</FBadge>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#7B8193', letterSpacing: '0.1em', marginBottom: 8 }}>PROGRESS · RING · STAT</div>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                  <FRing value={0.68} size={64} stroke={6} label="68%" sub="XP"/>
+                  <div style={{ flex: 1 }}>
+                    <FProgress value={0.68}/>
+                    <div style={{ height: 8 }}/>
+                    <FProgress value={0.4} color="#5ED19A" height={4}/>
+                  </div>
+                  <FStat value="14" unit="day" size="md" label="STREAK"/>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#7B8193', letterSpacing: '0.1em', marginBottom: 8 }}>SPARK · BARS</div>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                  <FSparkline data={[3,5,4,7,6,8,9,8,10]} w={140} h={40}/>
+                  <FBars data={[3,5,4,7,6,8,9]} w={160} h={40}/>
+                </div>
+              </div>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ───── Mobile flow ───── */}
+        {showMobile && (
+          <DCSection id="mobile" title="Mobile · iOS" subtitle="Onboarding → daily flow → progress → community. Dark theme with Forge fire accents.">
+            {mobileScreens.map(s => (
+              <DCArtboard key={s.id} id={s.id} label={s.label} width={400} height={840}>
+                <MobileBoard>{s.comp}</MobileBoard>
+              </DCArtboard>
+            ))}
+          </DCSection>
+        )}
+
+        {/* ───── Add Exercise — mobile flow ───── */}
+        {showMobile && (
+          <DCSection id="add-flow" title="Add Exercise · Mobile flow" subtitle="Search external DB → no match → forge your own. Same pattern reused for foods later.">
+            {addExerciseMobile.map(s => (
+              <DCArtboard key={s.id} id={s.id} label={s.label} width={400} height={840}>
+                <MobileBoard>{s.comp}</MobileBoard>
+              </DCArtboard>
+            ))}
+          </DCSection>
+        )}
+
+        {/* ───── Web flow ───── */}
+        {showWeb && (
+          <DCSection id="web" title="Web · Desktop" subtitle="Dense data view: sidebar nav, tables, charts, badges. Reuses every mobile token.">
+            {webScreens.map(s => (
+              <DCArtboard key={s.id} id={s.id} label={s.label} width={1280} height={820}>
+                <WebBoard url={s.url}>{s.comp}</WebBoard>
+              </DCArtboard>
+            ))}
+          </DCSection>
+        )}
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="View">
+          <TweakRadio label="Show" value={t.view} onChange={v => setTweak('view', v)}
+            options={[
+              { value: 'both',   label: 'Both' },
+              { value: 'mobile', label: 'Mobile' },
+              { value: 'web',    label: 'Web' },
+            ]}/>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ForgeApp/>);
+</script>
+
+</body>
+</html>

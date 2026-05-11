@@ -1,0 +1,113 @@
+/* Forge Design Tokens
+   Dark fitness app — orange/amber accent on graphite ground.
+*/
+
+:root {
+  /* Surfaces */
+  --bg-0: #0B0F14;        /* canvas */
+  --bg-1: #121826;        /* card / surface */
+  --bg-2: #1A2233;        /* elevated / modal */
+  --bg-3: #232C40;        /* hover */
+  --line: rgba(255,255,255,0.06);
+  --line-strong: rgba(255,255,255,0.12);
+
+  /* Accent */
+  --accent: #F97316;
+  --accent-muted: #C2500A;
+  --accent-soft: rgba(249, 115, 22, 0.12);
+  --accent-glow: rgba(249, 115, 22, 0.35);
+
+  /* Semantic */
+  --success: #5ED19A;
+  --error:   #E26D6D;
+  --warning: #F0B86E;
+
+  /* Text */
+  --text:     #E6EAF2;
+  --text-mid: #AAB0C0;
+  --text-dim: #7B8193;
+
+  /* Type */
+  --f-display: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --f-body:    "Inter", ui-sans-serif, system-ui, sans-serif;
+  --f-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Radii */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 0 rgba(255,255,255,0.04) inset, 0 6px 14px rgba(0,0,0,0.35);
+  --shadow-2: 0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px rgba(0,0,0,0.45);
+}
+
+/* Reset for our screens (scoped to .forge) */
+.forge, .forge * { box-sizing: border-box; }
+.forge {
+  background: var(--bg-0);
+  color: var(--text);
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+}
+.forge button { font: inherit; color: inherit; }
+.forge h1, .forge h2, .forge h3, .forge h4 {
+  font-family: var(--f-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text);
+}
+.forge .num { font-family: var(--f-display); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.forge .mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* Striped image placeholder — subtle diagonal */
+.forge .imgph {
+  background-color: #1A2233;
+  background-image:
+    repeating-linear-gradient(135deg,
+      rgba(255,255,255,0.025) 0 14px,
+      rgba(255,255,255,0)     14px 28px);
+  position: relative;
+  overflow: hidden;
+}
+.forge .imgph::after {
+  content: attr(data-label);
+  position: absolute; left: 12px; bottom: 10px;
+  font-family: var(--f-mono); font-size: 10px;
+  color: var(--text-dim); letter-spacing: 0.04em;
+}
+.forge .imgph[data-tone="warm"] {
+  background-color: #2a1a14;
+  background-image:
+    repeating-linear-gradient(135deg,
+      rgba(249,115,22,0.08) 0 14px,
+      rgba(249,115,22,0)    14px 28px);
+}
+
+/* Tonal accent gradient pad */
+.forge .heat {
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(249,115,22,0.35), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, rgba(226,109,109,0.18), transparent 60%),
+    linear-gradient(135deg, #1A2233 0%, #121826 100%);
+}
+
+/* Keyframes */
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.35); }
+  50%     { box-shadow: 0 0 0 8px rgba(249,115,22,0.0); }
+}
+@keyframes barFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(var(--p, 0.6)); }
+}
+@keyframes shine {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(220%); }
+}
+
+/* Scrollbars hidden inside artboards (canvas already does this) */
