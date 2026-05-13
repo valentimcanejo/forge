@@ -21,8 +21,12 @@ function dateDiff(entries: ProgressEntry[], key: keyof ProgressEntry): string {
 export default function ProgressPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('Body');
-  const tabs = ['Body', 'Lifts', 'Photos'];
+  const tabs = [
+    { key: 'body', label: t('progress.body') },
+    { key: 'lifts', label: t('progress.lifts') },
+    { key: 'photos', label: t('progress.photos') },
+  ];
+  const [activeTab, setActiveTab] = useState('body');
   const [entries, setEntries] = useState<ProgressEntry[]>([]);
   const [prs, setPRs] = useState<PRRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,12 +51,12 @@ export default function ProgressPage() {
   const photos = entries.filter(e => e.photoUrl);
 
   const MEASURES = [
-    { label: 'Weight',   key: 'weightKg'   as const, unit: 'kg' },
-    { label: 'Body fat', key: 'bodyFatPct' as const, unit: '%' },
-    { label: 'Chest',    key: 'chestCm'   as const, unit: 'cm' },
-    { label: 'Waist',    key: 'waistCm'   as const, unit: 'cm' },
-    { label: 'Arms',     key: 'armsCm'    as const, unit: 'cm' },
-    { label: 'Thighs',   key: 'thighsCm'  as const, unit: 'cm' },
+    { label: t('progress.bodyWeight'), key: 'weightKg'   as const, unit: 'kg' },
+    { label: t('progress.bodyFat'),    key: 'bodyFatPct' as const, unit: '%' },
+    { label: t('progress.chest'),      key: 'chestCm'   as const, unit: 'cm' },
+    { label: t('progress.waist'),      key: 'waistCm'   as const, unit: 'cm' },
+    { label: t('progress.arms'),       key: 'armsCm'    as const, unit: 'cm' },
+    { label: t('progress.thighs'),     key: 'thighsCm'  as const, unit: 'cm' },
   ];
 
   return (
@@ -61,7 +65,7 @@ export default function ProgressPage() {
         <div>
           <h1 style={{ fontSize: 24, fontFamily: 'DM Sans, sans-serif', fontWeight: 700, letterSpacing: '-0.02em' }}>{t('progress.title')}</h1>
           <div style={{ fontSize: 13, color: FG.mid, marginTop: 2 }}>
-            {weeksIn > 0 ? `${weeksIn} weeks tracked` : 'Start logging to see trends'}
+            {weeksIn > 0 ? t('progress.weeksTracked', { count: weeksIn }) : t('progress.startLogging')}
           </div>
         </div>
       </div>
@@ -70,17 +74,17 @@ export default function ProgressPage() {
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
           {tabs.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
               padding: '8px 16px', borderRadius: 8,
-              background: activeTab === tab ? FG.bg2 : 'transparent',
-              border: `1px solid ${activeTab === tab ? FG.lineStrong : 'transparent'}`,
-              color: activeTab === tab ? FG.text : FG.mid,
+              background: activeTab === tab.key ? FG.bg2 : 'transparent',
+              border: `1px solid ${activeTab === tab.key ? FG.lineStrong : 'transparent'}`,
+              color: activeTab === tab.key ? FG.text : FG.mid,
               fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600,
-            }}>{tab}</button>
+            }}>{tab.label}</button>
           ))}
         </div>
 
-        {activeTab === 'Body' && (
+        {activeTab === 'body' && (
           <>
             {/* Stat cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 14, marginBottom: 18 }}>
@@ -105,7 +109,7 @@ export default function ProgressPage() {
 
             {/* Weight chart */}
             <FCard padding={20} style={{ marginBottom: 14 }}>
-              <FSectionHead kicker="BODY WEIGHT" title={weightTrend.length >= 2 ? `${weeksIn} week trend` : 'Weight trend'}/>
+              <FSectionHead kicker={t('progress.bodyWeightKicker')} title={weightTrend.length >= 2 ? t('progress.weekTrend', { count: weeksIn }) : t('progress.weightTrendTitle')}/>
               {weightTrend.length >= 2 ? (
                 <>
                   <FSparkline data={weightTrend} w={900} h={160}/>
@@ -120,29 +124,29 @@ export default function ProgressPage() {
               ) : (
                 <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: FG.dim }}>
                   <div style={{ fontSize: 32 }}>📊</div>
-                  <div style={{ fontSize: 13 }}>No weight data yet — log progress entries to see trends</div>
+                  <div style={{ fontSize: 13 }}>{t('progress.noWeightData')}</div>
                 </div>
               )}
             </FCard>
           </>
         )}
 
-        {activeTab === 'Lifts' && (
+        {activeTab === 'lifts' && (
           <div>
             {prs.length === 0 && !loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 12, color: FG.dim }}>
                 <div style={{ fontSize: 48 }}>🏋️</div>
-                <h3 style={{ fontSize: 18, color: FG.text }}>No PRs yet</h3>
-                <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 360 }}>Complete workouts on mobile to automatically track your personal records here.</p>
+                <h3 style={{ fontSize: 18, color: FG.text }}>{t('progress.noPRs')}</h3>
+                <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 360 }}>{t('progress.prPrompt')}</p>
               </div>
             ) : (
               <div style={{ background: FG.bg1, borderRadius: 14, border: `1px solid ${FG.line}`, overflow: 'hidden' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '12px 20px', gap: 12, fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.12em', borderBottom: `1px solid ${FG.line}`, textTransform: 'uppercase' }}>
-                  <span>EXERCISE</span>
-                  <span>WEIGHT</span>
-                  <span>REPS</span>
-                  <span>EST. 1RM</span>
-                  <span>DATE</span>
+                  <span>{t('progress.colExercise')}</span>
+                  <span>{t('progress.colWeight')}</span>
+                  <span>{t('progress.colReps')}</span>
+                  <span>{t('progress.colEst1rm')}</span>
+                  <span>{t('progress.colDate')}</span>
                 </div>
                 {prs
                   .slice()
@@ -166,26 +170,26 @@ export default function ProgressPage() {
           </div>
         )}
 
-        {activeTab === 'Photos' && (
+        {activeTab === 'photos' && (
           <div>
             {photos.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: 12, color: FG.dim }}>
                 <div style={{ fontSize: 48 }}>📸</div>
-                <h3 style={{ fontSize: 18, color: FG.text }}>No photos yet</h3>
-                <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 360 }}>Log progress entries with photos from the mobile app to start your visual timeline.</p>
+                <h3 style={{ fontSize: 18, color: FG.text }}>{t('progress.noPhotos')}</h3>
+                <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 360 }}>{t('progress.photosPrompt')}</p>
               </div>
             ) : (
               <div>
                 {photos.length >= 2 && (
                   <FCard padding={20} style={{ marginBottom: 18 }}>
-                    <FSectionHead kicker="COMPARE" title="First vs Latest"/>
+                    <FSectionHead kicker={t('progress.compare')} title={t('progress.firstVsLatest')}/>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       {[photos[0], photos[photos.length - 1]].map((p, i) => (
                         <div key={i}>
                           <div style={{ aspectRatio: '3/4', borderRadius: 12, overflow: 'hidden', background: FG.bg2, position: 'relative' }}>
                             <img src={p.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
                             <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(0,0,0,0.55)', borderRadius: 4, padding: '3px 8px', fontSize: 10, color: FG.text, letterSpacing: '0.1em' }}>
-                              {i === 0 ? 'FIRST' : 'LATEST'}
+                              {i === 0 ? t('progress.first') : t('progress.latest')}
                             </div>
                           </div>
                           <div style={{ marginTop: 6, fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>

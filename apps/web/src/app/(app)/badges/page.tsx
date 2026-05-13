@@ -42,7 +42,7 @@ export default function BadgesPage() {
                 </div>
                 <h2 style={{ fontSize: 32, marginTop: 6 }}>{xp.toLocaleString()} <span style={{ color: FG.dim, fontWeight: 500, fontSize: 18 }}>{t('gamification.xp')}</span></h2>
                 <div style={{ fontSize: 13, color: FG.mid, marginTop: 4 }}>
-                  {xpToNext} XP to reach next level
+                  {t('gamification.xpToNextLevel', { xp: xpToNext })}
                 </div>
               </div>
             </div>
@@ -64,7 +64,7 @@ export default function BadgesPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
           {/* Badge grid */}
           <div>
-            <FSectionHead kicker={`${earned.length} EARNED · ${BADGES.length - earned.length} LOCKED`} title={t('gamification.badges')}/>
+            <FSectionHead kicker={t('gamification.badgesEarned', { earned: earned.length, locked: BADGES.length - earned.length })} title={t('gamification.badges')}/>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
               {BADGES.map((b) => {
                 const isEarned = earned.includes(b.id);
@@ -84,7 +84,7 @@ export default function BadgesPage() {
                       {t(b.nameKey)}
                     </div>
                     <div style={{ fontSize: 9, color: isEarned ? FG.accent : FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 4, position: 'relative' }}>
-                      {isEarned ? 'earned' : `+${b.xpReward} XP`}
+                      {isEarned ? t('gamification.earned') : `+${b.xpReward} XP`}
                     </div>
                   </div>
                 );

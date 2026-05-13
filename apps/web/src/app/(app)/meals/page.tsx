@@ -49,7 +49,7 @@ export default function MealsPage() {
       <div style={{ padding: '20px 32px', borderBottom: `1px solid ${FG.line}`, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexShrink: 0 }}>
         <div>
           <h1 style={{ fontSize: 24, fontFamily: 'DM Sans, sans-serif', fontWeight: 700, letterSpacing: '-0.02em' }}>{t('diet.todaysPlate')}</h1>
-          <div style={{ fontSize: 13, color: FG.mid, marginTop: 2 }}>{KCAL_TARGET} kcal target</div>
+          <div style={{ fontSize: 13, color: FG.mid, marginTop: 2 }}>{t('diet.kcalTarget', { kcal: KCAL_TARGET })}</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <FButton size="sm" onClick={() => window.location.href = '/meals'}>{t('diet.logFood')}</FButton>
@@ -61,13 +61,13 @@ export default function MealsPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 14, marginBottom: 18 }}>
           {/* Macro ring */}
           <FCard padding={20}>
-            <FSectionHead kicker="OVERVIEW" title="Daily totals"/>
+            <FSectionHead kicker={t('diet.overview')} title={t('diet.dailyTotals')}/>
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               <FRing
                 value={Math.min(kcal / KCAL_TARGET, 1)}
                 size={130} stroke={11}
                 label={kcal.toString()}
-                sub={`of ${KCAL_TARGET}`}
+                sub={t('diet.ofTarget', { val: KCAL_TARGET })}
               />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {[
@@ -89,9 +89,9 @@ export default function MealsPage() {
             {kcal > 0 && (
               <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: remaining >= 0 ? 'rgba(94,209,154,0.06)' : 'rgba(226,109,109,0.06)', border: `1px solid ${remaining >= 0 ? 'rgba(94,209,154,0.2)' : 'rgba(226,109,109,0.2)'}`, display: 'flex', justifyContent: 'space-around' }}>
                 {[
-                  { l: 'Consumed', v: kcal.toString() },
-                  { l: 'Target', v: KCAL_TARGET.toString() },
-                  { l: remaining >= 0 ? 'Remaining' : 'Over', v: Math.abs(remaining).toString(), color: remaining >= 0 ? FG.ok : FG.err },
+                  { l: t('diet.consumed'), v: kcal.toString() },
+                  { l: t('diet.target'), v: KCAL_TARGET.toString() },
+                  { l: remaining >= 0 ? t('diet.remaining') : t('diet.over'), v: Math.abs(remaining).toString(), color: remaining >= 0 ? FG.ok : FG.err },
                 ].map(s => (
                   <div key={s.l} style={{ textAlign: 'center' }}>
                     <div className="num" style={{ fontSize: 20, color: s.color }}>{s.v}</div>
@@ -104,11 +104,11 @@ export default function MealsPage() {
 
           {/* Water */}
           <FCard padding={18}>
-            <FSectionHead kicker="WATER" title={t('diet.hydration')}/>
+            <FSectionHead kicker={t('diet.waterKicker')} title={t('diet.hydration')}/>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 12 }}>
               <span className="num" style={{ fontSize: 38 }}>{(waterMl / 1000).toFixed(1)}</span>
               <span style={{ color: FG.mid }}>/ {(WATER_GOAL_ML / 1000).toFixed(1)} L</span>
-              {waterMl >= WATER_GOAL_ML && <FBadge tone="ok">Goal!</FBadge>}
+              {waterMl >= WATER_GOAL_ML && <FBadge tone="ok">{t('diet.waterGoal')}</FBadge>}
             </div>
             <FProgress value={Math.min(waterMl / WATER_GOAL_ML, 1)} color={FG.ok} height={5}/>
             <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
@@ -127,13 +127,13 @@ export default function MealsPage() {
 
           {/* Remaining macros */}
           <FCard padding={18}>
-            <FSectionHead kicker="REMAINING" title="Budget"/>
+            <FSectionHead kicker={t('diet.remainingKicker')} title={t('diet.budgetTitle')}/>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
               {[
-                { l: 'Calories', v: Math.max(0, KCAL_TARGET - kcal), u: 'kcal', c: FG.text },
-                { l: 'Protein',  v: Math.max(0, MACRO_TARGETS.protein - protein), u: 'g', c: FG.accent },
-                { l: 'Carbs',    v: Math.max(0, MACRO_TARGETS.carbs - carbs), u: 'g', c: FG.warn },
-                { l: 'Fat',      v: Math.max(0, MACRO_TARGETS.fat - fat), u: 'g', c: FG.ok },
+                { l: t('diet.calories'), v: Math.max(0, KCAL_TARGET - kcal), u: 'kcal', c: FG.text },
+                { l: t('diet.protein'),  v: Math.max(0, MACRO_TARGETS.protein - protein), u: 'g', c: FG.accent },
+                { l: t('diet.carbs'),    v: Math.max(0, MACRO_TARGETS.carbs - carbs), u: 'g', c: FG.warn },
+                { l: t('diet.fat'),      v: Math.max(0, MACRO_TARGETS.fat - fat), u: 'g', c: FG.ok },
               ].map(m => (
                 <div key={m.l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 12, color: FG.mid }}>{m.l}</span>
@@ -146,7 +146,7 @@ export default function MealsPage() {
 
         {/* Meal slots */}
         <div>
-          <div style={{ marginBottom: 12 }}><FSectionHead kicker="MEALS · TODAY" title="Today's log"/></div>
+          <div style={{ marginBottom: 12 }}><FSectionHead kicker={t('diet.mealsKicker')} title={t('diet.todaysLog')}/></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {MEAL_SLOTS.map((slot) => {
               const logged = meals.filter(m => m.name?.toLowerCase() === slot.name.toLowerCase());
@@ -168,17 +168,17 @@ export default function MealsPage() {
                       {hasItems ? (
                         <div style={{ fontSize: 12, color: FG.mid, marginTop: 3 }}>
                           {logged.flatMap(m => m.foods?.map(f => f.foodName) ?? [m.name]).slice(0, 3).join(' · ')}
-                          {logged.length > 3 ? ` +${logged.length - 3} more` : ''}
+                          {logged.length > 3 ? ` ${t('diet.plusMore', { n: logged.length - 3 })}` : ''}
                         </div>
                       ) : (
-                        <div style={{ fontSize: 12, color: FG.accent, marginTop: 3 }}>Log from mobile app</div>
+                        <div style={{ fontSize: 12, color: FG.accent, marginTop: 3 }}>{t('diet.logFromMobile')}</div>
                       )}
                     </div>
                     {hasItems && (
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                         <div style={{ textAlign: 'right' }}>
                           <div className="num" style={{ fontSize: 18 }}>{Math.round(slotKcal)}</div>
-                          <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>KCAL</div>
+                          <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{t('diet.kcalLabel')}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <FBadge tone="accent">{Math.round(slotP)}P</FBadge>

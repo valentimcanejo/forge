@@ -72,7 +72,7 @@ export default function DashboardPage() {
             {t('dashboard.greeting', { name })}
           </h1>
           <div style={{ fontSize: 13, color: FG.mid, marginTop: 2 }}>
-            {dateStr}{streak > 0 ? ` · Day ${streak} of streak` : ''}
+            {dateStr}{streak > 0 ? ` · ${t('dashboard.streakSubtitle', { n: streak })}` : ''}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -90,23 +90,23 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 18 }}>
           {[
             {
-              k: 'BODY WEIGHT', v: latestWeight != null ? latestWeight.toFixed(1) : '—', u: 'kg',
+              k: t('dashboard.bodyWeightKicker'), v: latestWeight != null ? latestWeight.toFixed(1) : '—', u: 'kg',
               d: weightDiff != null ? `${weightDiff >= 0 ? '+' : ''}${weightDiff.toFixed(1)} kg · ${progressEntries.length}W` : 'no data yet',
               tone: weightDiff != null && weightDiff <= 0 ? 'ok' : 'warn',
               spark: weightTrend.length >= 2 ? weightTrend : null,
             },
             {
-              k: 'WEEKLY VOLUME', v: totalVolume > 0 ? (totalVolume / 1000).toFixed(1) : '—', u: totalVolume > 0 ? 'k kg' : '',
-              d: totalVolume > 0 ? 'this week' : 'start a workout',
+              k: t('dashboard.weeklyVolumeKicker'), v: totalVolume > 0 ? (totalVolume / 1000).toFixed(1) : '—', u: totalVolume > 0 ? 'k kg' : '',
+              d: totalVolume > 0 ? t('common.thisWeek') : t('dashboard.startWorkout'),
               tone: 'ok', spark: weeklyVolume.some(v => v > 0) ? weeklyVolume : null,
             },
             {
-              k: 'PROTEIN TODAY', v: protein.toString(), u: 'g',
-              d: `target ${MACRO_TARGETS.protein}g`,
+              k: t('dashboard.proteinTodayKicker'), v: protein.toString(), u: 'g',
+              d: t('dashboard.targetLabel', { val: MACRO_TARGETS.protein }),
               tone: protein >= MACRO_TARGETS.protein ? 'ok' : 'warn', spark: null,
             },
             {
-              k: 'XP TO LVL ' + (level.level + 1), v: String(xpToNext), u: 'xp',
+              k: t('dashboard.xpToLevelKicker', { n: level.level + 1 }), v: String(xpToNext), u: 'xp',
               d: `${Math.round(xpProgress * 100)}% complete`,
               tone: 'accent', spark: null,
             },
@@ -128,7 +128,7 @@ export default function DashboardPage() {
           {/* Weight chart */}
           <FCard padding={20}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-              <FSectionHead kicker="BODY WEIGHT" title={weightTrend.length >= 2 ? `${progressEntries.length} week trend` : 'Weight trend'}/>
+              <FSectionHead kicker={t('dashboard.bodyWeightKicker')} title={weightTrend.length >= 2 ? t('progress.weekTrend', { count: progressEntries.length }) : t('progress.weightTrendTitle')}/>
             </div>
             {weightTrend.length >= 2 ? (
               <>
@@ -141,20 +141,20 @@ export default function DashboardPage() {
             ) : (
               <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, color: FG.dim }}>
                 <div style={{ fontSize: 32 }}>📊</div>
-                <div style={{ fontSize: 13 }}>Log weight in Progress to see your trend</div>
+                <div style={{ fontSize: 13 }}>{t('dashboard.logWeightPrompt')}</div>
               </div>
             )}
           </FCard>
 
           {/* Macros */}
           <FCard padding={20}>
-            <FSectionHead kicker="TODAY" title="Macros"/>
+            <FSectionHead kicker={t('common.today').toUpperCase()} title={t('nav.meals')}/>
             <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 16 }}>
               <FRing
                 value={Math.min(kcalConsumed / KCAL_TARGET, 1)}
                 size={88} stroke={8}
                 label={kcalConsumed.toString()}
-                sub={`of ${KCAL_TARGET}`}
+                sub={t('diet.ofTarget', { val: KCAL_TARGET })}
               />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[
@@ -174,7 +174,7 @@ export default function DashboardPage() {
             </div>
             {waterMl < 2000 && (
               <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(240,184,110,0.08)', border: `1px solid rgba(240,184,110,0.18)`, display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: FG.warn }}>
-                💧 {(waterMl / 1000).toFixed(1)} / 3.0 L — log water in Meals
+                💧 {(waterMl / 1000).toFixed(1)} / 3.0 L — {t('dashboard.logWaterPrompt')}
               </div>
             )}
           </FCard>
@@ -184,7 +184,7 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
           {/* Volume bars */}
           <FCard padding={18}>
-            <FSectionHead kicker="THIS WEEK" title="Volume"/>
+            <FSectionHead kicker={t('common.thisWeek').toUpperCase()} title={t('workout.volume')}/>
             <FBars data={weeklyVolume} w={260} h={120}/>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>
               {DAYS.map((d, i) => <span key={i} style={{ flex: 1, textAlign: 'center', color: i === new Date().getDay() ? FG.accent : FG.dim }}>{d}</span>)}
@@ -193,13 +193,13 @@ export default function DashboardPage() {
 
           {/* Level / XP */}
           <FCard padding={18}>
-            <FSectionHead kicker={`LVL ${level.level} · ${level.name.toUpperCase()}`} title="Experience"/>
+            <FSectionHead kicker={`LVL ${level.level} · ${level.name.toUpperCase()}`} title={t('dashboard.experience')}/>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
               <FRing value={xpProgress} size={72} stroke={6} label={`${Math.round(xpProgress * 100)}%`} sub="XP"/>
               <div>
                 <div style={{ fontSize: 26, fontWeight: 700, color: FG.text, fontFamily: 'DM Sans, sans-serif' }}>{xp.toLocaleString()}</div>
-                <div style={{ fontSize: 12, color: FG.mid, marginTop: 2 }}>total XP</div>
-                <div style={{ fontSize: 11, color: FG.accent, marginTop: 6, fontFamily: 'JetBrains Mono, monospace' }}>{xpToNext} to LVL {level.level + 1}</div>
+                <div style={{ fontSize: 12, color: FG.mid, marginTop: 2 }}>{t('dashboard.totalXp')}</div>
+                <div style={{ fontSize: 11, color: FG.accent, marginTop: 6, fontFamily: 'JetBrains Mono, monospace' }}>{xpToNext} {t('dashboard.toLevelN', { n: level.level + 1 })}</div>
               </div>
             </div>
             <div style={{ marginTop: 14 }}><FProgress value={xpProgress} height={4}/></div>
@@ -207,14 +207,14 @@ export default function DashboardPage() {
 
           {/* Recent activity */}
           <FCard padding={18}>
-            <FSectionHead kicker="ACTIVITY" title="Recent"/>
+            <FSectionHead kicker={t('dashboard.activityKicker')} title={t('common.recent')}/>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {gamification && gamification.streakDays > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: `${FG.warn}1A`, color: FG.warn, border: `1px solid ${FG.warn}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>🔥</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500 }}>Day {streak} streak</div>
-                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>keep it up</div>
+                    <div style={{ fontSize: 12, fontWeight: 500 }}>{t('dashboard.dayStreak', { n: streak })}</div>
+                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>{t('dashboard.keepItUp')}</div>
                   </div>
                 </div>
               )}
@@ -222,8 +222,8 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: `${FG.ok}1A`, color: FG.ok, border: `1px solid ${FG.ok}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>✓</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500 }}>{gamification.totalWorkouts} workouts logged</div>
-                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>total</div>
+                    <div style={{ fontSize: 12, fontWeight: 500 }}>{t('dashboard.workoutsLogged', { n: gamification.totalWorkouts })}</div>
+                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>{t('common.total')}</div>
                   </div>
                 </div>
               )}
@@ -231,14 +231,14 @@ export default function DashboardPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: 8, background: `${FG.accent}1A`, color: FG.accent, border: `1px solid ${FG.accent}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>↗</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500 }}>{gamification.totalPRs} personal records</div>
-                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>all time</div>
+                    <div style={{ fontSize: 12, fontWeight: 500 }}>{t('dashboard.personalRecords', { n: gamification.totalPRs })}</div>
+                    <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', marginTop: 1 }}>{t('common.allTime')}</div>
                   </div>
                 </div>
               )}
               {(!gamification || (gamification.totalWorkouts === 0 && gamification.totalPRs === 0 && gamification.streakDays === 0)) && (
                 <div style={{ color: FG.dim, fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
-                  Start your first workout to see activity here
+                  {t('dashboard.startFirstWorkout')}
                 </div>
               )}
             </div>
