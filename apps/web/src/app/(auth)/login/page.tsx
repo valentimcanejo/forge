@@ -22,7 +22,7 @@ export default function LoginPage() {
       router.replace('/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed';
-      toast.error(msg.includes('wrong-password') || msg.includes('user-not-found') ? 'Invalid email or password' : 'Login failed');
+      toast.error(msg.includes('wrong-password') || msg.includes('user-not-found') ? t('auth.invalidCredentials') : t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,7 @@ export default function LoginPage() {
       await loginWithGoogle();
       router.replace('/dashboard');
     } catch {
-      toast.error('Google sign-in failed');
+      toast.error(t('auth.googleFailed'));
     } finally {
       setLoading(false);
     }
@@ -74,13 +74,13 @@ export default function LoginPage() {
               }}
             />
             <FButton type="submit" size="lg" fullWidth disabled={loading}>
-              {loading ? 'Signing in…' : t('auth.login')}
+              {loading ? t('auth.signingIn') : t('auth.login')}
             </FButton>
           </form>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
             <div style={{ flex: 1, height: 1, background: FG.line }}/>
-            <span style={{ fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>OR</span>
+            <span style={{ fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{t('common.or')}</span>
             <div style={{ flex: 1, height: 1, background: FG.line }}/>
           </div>
 
