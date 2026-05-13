@@ -75,6 +75,30 @@ export interface BadgeCondition {
   threshold: number;
 }
 
+export interface RoutineExercise {
+  exerciseId: string;
+  exerciseName: string;
+  muscleGroup: MuscleGroup;
+  targetSets: number;
+  repsMin: number;
+  repsMax: number;
+  startingWeightKg?: number;
+  notes?: string;
+  order: number;
+}
+
+export interface WorkoutRoutine {
+  id: string;
+  uid: string;
+  name: string;
+  description?: string;
+  exercises: RoutineExercise[];
+  createdAt: Date;
+  updatedAt: Date;
+  timesUsed: number;
+  lastUsedAt?: Date;
+}
+
 export interface WorkoutSession {
   id: string;
   uid: string;
@@ -121,6 +145,7 @@ export interface Exercise {
   instructions?: string[];
   videoUrl?: string;
   imageUrl?: string;
+  imageUrl2?: string;
   timesLogged?: number;
   createdBy?: string;
   apiId?: string;
