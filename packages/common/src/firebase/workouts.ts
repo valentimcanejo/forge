@@ -4,7 +4,65 @@ import {
   getDoc, deleteDoc,
 } from 'firebase/firestore';
 import { db } from './config';
-import type { WorkoutSession, Exercise } from '../types';
+import type { WorkoutSession, Exercise, WorkoutRoutine } from '../types';
+
+const routinesCol = (uid: string) => collection(db, 'users', uid, 'routines');
+
+function stripUndefined<T extends object>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as T;
+}
+
+export async function getRoutines(uid: string): Promise<WorkoutRoutine[]> {
+  const q = query(routinesCol(uid), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      ...data,
+      id: d.id,
+      createdAt: (data.createdAt as Timestamp).toDate(),
+      updatedAt: (data.updatedAt as Timestamp).toDate(),
+      lastUsedAt: data.lastUsedAt ? (data.lastUsedAt as Timestamp).toDate() : undefined,
+    } as WorkoutRoutine;
+  });
+}
+
+export async function createRoutine(uid: string, data: Omit<WorkoutRoutine, 'id' | 'uid' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  const ref = await addDoc(routinesCol(uid), {
+    ...data,
+    exercises: data.exercises.map(stripUndefined),
+    uid,
+    timesUsed: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function updateRoutine(uid: string, routineId: string, data: Partial<Omit<WorkoutRoutine, 'id' | 'uid'>>): Promise<void> {
+  await updateDoc(doc(db, 'users', uid, 'routines', routineId), {
+    ...data,
+    ...(data.exercises ? { exercises: data.exercises.map(stripUndefined) } : {}),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteRoutine(uid: string, routineId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'routines', routineId));
+}
+
+export async function incrementRoutineUsage(uid: string, routineId: string): Promise<void> {
+  const ref = doc(db, 'users', uid, 'routines', routineId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  await updateDoc(ref, {
+    timesUsed: (snap.data().timesUsed ?? 0) + 1,
+    lastUsedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
 
 const workoutsCol = (uid: string) => collection(db, 'users', uid, 'workouts');
 const exercisesCol = collection(db, 'exercises');
