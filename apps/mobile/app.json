@@ -31,7 +31,6 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser",
       [
         "expo-splash-screen",
         {
@@ -43,6 +42,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "00872b1d-ee1d-468d-b6f4-84141847e43d"
+      }
     }
   }
 }

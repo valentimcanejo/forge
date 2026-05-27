@@ -18,6 +18,9 @@
     "turbo": "^2.0.0",
     "typescript": "^5.4.5"
   },
+  "overrides": {
+    "@types/react": "~18.3.12"
+  },
   "engines": {
     "node": ">=20.0.0"
   },
