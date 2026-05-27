@@ -1,9 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FCard, FBadge, FProgress, FRing, FSectionHead, FButton, FG } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
-import { logWater, getDailyLog } from '@forge/common';
+import {
+  logWater, getDailyLog, addMealToLog, searchFoodsAPI, calcFoodMacros, COMMON_FOODS,
+} from '@forge/common';
+import type { Food, MealLog, MealType, FoodEntry } from '@forge/common';
 
 const KCAL_TARGET = 2650;
 const MACRO_TARGETS = { protein: 180, carbs: 320, fat: 80 };
@@ -16,12 +19,182 @@ const MEAL_SLOTS = [
   { name: 'Dinner',    time: '20:00', emoji: '🍽' },
 ];
 
+const MEAL_TYPE_MAP: Record<string, MealType> = {
+  breakfast: 'breakfast', lunch: 'lunch', snack: 'snack', dinner: 'dinner',
+};
+
+function mealTime(name: string) {
+  const t: Record<string, string> = { Breakfast: '08:30', Lunch: '13:00', Snack: '16:30', Dinner: '20:00' };
+  return t[name] ?? '';
+}
+
 function today() { return new Date().toISOString().slice(0, 10); }
+
+// ── Food Log Modal ────────────────────────────────────────────────────────────
+
+function FoodLogModal({
+  mealName,
+  onClose,
+  onLogged,
+}: {
+  mealName: string;
+  onClose: () => void;
+  onLogged: () => void;
+}) {
+  const { user } = useAuthStore();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Food[]>(COMMON_FOODS);
+  const [searching, setSearching] = useState(false);
+  const [loggingId, setLoggingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const { foods } = await searchFoodsAPI(query || 'protein');
+        setResults(foods);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  async function logFood(food: Food) {
+    if (!user || loggingId) return;
+    setLoggingId(food.id);
+    try {
+      const serving = food.servingSuggestionG ?? 100;
+      const macros = calcFoodMacros(food, serving);
+      const entry: FoodEntry = {
+        foodId: food.id,
+        foodName: food.name,
+        ...(food.brand ? { brand: food.brand } : {}),
+        servingG: serving,
+        servingLabel: food.servingLabel ?? `${serving}g`,
+        kcal: macros.kcal,
+        proteinG: macros.proteinG,
+        carbsG: macros.carbsG,
+        fatG: macros.fatG,
+        source: food.source,
+      };
+      const mealLog: MealLog = {
+        id: `${mealName.toLowerCase()}_${food.id}_${Date.now()}`,
+        type: MEAL_TYPE_MAP[mealName.toLowerCase()] ?? 'lunch',
+        name: mealName,
+        scheduledTime: mealTime(mealName),
+        foods: [entry],
+        totalKcal: macros.kcal,
+        totalProteinG: macros.proteinG,
+        totalCarbsG: macros.carbsG,
+        totalFatG: macros.fatG,
+        completed: false,
+      };
+      await addMealToLog(user.uid, today(), mealLog);
+      onLogged();
+    } finally {
+      setLoggingId(null);
+    }
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(11,15,20,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ width: 500, maxHeight: '76vh', background: FG.bg1, border: `1px solid ${FG.lineStrong}`, borderRadius: 20, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${FG.line}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{mealName} · {mealTime(mealName)}</div>
+            <div style={{ fontSize: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 800, letterSpacing: '-0.02em', marginTop: 2 }}>Log food</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: FG.dim, cursor: 'pointer', fontSize: 20, padding: '0 4px', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '12px 20px', borderBottom: `1px solid ${FG.line}` }}>
+          <div style={{ position: 'relative' }}>
+            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <circle cx="6.5" cy="6.5" r="4.5" stroke={FG.dim} strokeWidth="1.5"/>
+              <path d="M10 10l3 3" stroke={FG.dim} strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search foods…"
+              style={{ width: '100%', height: 38, paddingLeft: 36, paddingRight: 12, background: FG.bg2, border: `1px solid ${FG.line}`, borderRadius: 10, color: FG.text, fontFamily: 'Inter, sans-serif', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ fontSize: 10, color: FG.dim, marginTop: 6, fontFamily: 'JetBrains Mono, monospace' }}>
+            {searching ? 'Searching…' : `${results.length} items`}
+          </div>
+        </div>
+
+        {/* Results */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {results.map(food => {
+            const serving = food.servingSuggestionG ?? 100;
+            const macros = calcFoodMacros(food, serving);
+            const isLogging = loggingId === food.id;
+            return (
+              <div
+                key={food.id}
+                style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 20px', borderBottom: `1px solid ${FG.line}` }}
+              >
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: FG.bg2, border: `1px solid ${FG.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🍽</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{food.name}</div>
+                  {food.brand && <div style={{ fontSize: 11, color: FG.dim, marginTop: 1 }}>{food.brand} · {food.servingLabel ?? `${serving}g`}</div>}
+                  <div style={{ fontSize: 11, color: FG.mid, marginTop: 3, display: 'flex', gap: 8 }}>
+                    <span>{macros.kcal} kcal</span>
+                    <span style={{ color: FG.accent }}>{macros.proteinG}P</span>
+                    <span style={{ color: FG.warn }}>{macros.carbsG}C</span>
+                    <span style={{ color: FG.ok }}>{macros.fatG}F</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => logFood(food)}
+                  disabled={!!loggingId}
+                  style={{ width: 34, height: 34, borderRadius: 17, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)', color: isLogging ? FG.dim : FG.accent, fontSize: 18, cursor: loggingId ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  {isLogging ? '…' : '+'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function MealsPage() {
   const { t } = useTranslation();
   const { user, todayLog, setTodayLog } = useAuthStore();
   const [addingWater, setAddingWater] = useState(false);
+  const [logModalMeal, setLogModalMeal] = useState<string | null>(null);
+
+  // Refresh todayLog when page mounts
+  useEffect(() => {
+    if (!user) return;
+    getDailyLog(user.uid, today())
+      .then(log => { if (log) setTodayLog(log); })
+      .catch(() => {});
+  }, [user, setTodayLog]);
+
+  const refreshLog = useCallback(async () => {
+    if (!user) return;
+    const updated = await getDailyLog(user.uid, today());
+    if (updated) setTodayLog(updated);
+    setLogModalMeal(null);
+  }, [user, setTodayLog]);
 
   const kcal = Math.round(todayLog?.totalKcal ?? 0);
   const protein = Math.round(todayLog?.totalProteinG ?? 0);
@@ -52,7 +225,7 @@ export default function MealsPage() {
           <div style={{ fontSize: 13, color: FG.mid, marginTop: 2 }}>{t('diet.kcalTarget', { kcal: KCAL_TARGET })}</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <FButton size="sm" onClick={() => window.location.href = '/meals'}>{t('diet.logFood')}</FButton>
+          <FButton size="sm" onClick={() => setLogModalMeal('Lunch')}>{t('diet.logFood')}</FButton>
         </div>
       </div>
 
@@ -155,43 +328,57 @@ export default function MealsPage() {
               const hasItems = logged.length > 0;
 
               return (
-                <FCard key={slot.name} padding={16} style={{ opacity: !hasItems ? 0.65 : 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 60, height: 60, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, background: hasItems ? '#2a1a14' : FG.bg2 }}>
-                      {slot.emoji}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                        <h3 style={{ fontSize: 15, fontFamily: 'DM Sans, sans-serif', fontWeight: 700 }}>{slot.name}</h3>
-                        <span style={{ fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{slot.time}</span>
+                <div
+                  key={slot.name}
+                  onClick={() => setLogModalMeal(slot.name)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <FCard padding={16} style={{ opacity: !hasItems ? 0.65 : 1, transition: 'opacity 0.15s' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 60, height: 60, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, background: hasItems ? '#2a1a14' : FG.bg2 }}>
+                        {slot.emoji}
                       </div>
-                      {hasItems ? (
-                        <div style={{ fontSize: 12, color: FG.mid, marginTop: 3 }}>
-                          {logged.flatMap(m => m.foods?.map(f => f.foodName) ?? [m.name]).slice(0, 3).join(' · ')}
-                          {logged.length > 3 ? ` ${t('diet.plusMore', { n: logged.length - 3 })}` : ''}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <h3 style={{ fontSize: 15, fontFamily: 'DM Sans, sans-serif', fontWeight: 700 }}>{slot.name}</h3>
+                          <span style={{ fontSize: 11, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{slot.time}</span>
                         </div>
-                      ) : (
-                        <div style={{ fontSize: 12, color: FG.accent, marginTop: 3 }}>{t('diet.logFromMobile')}</div>
+                        {hasItems ? (
+                          <div style={{ fontSize: 12, color: FG.mid, marginTop: 3 }}>
+                            {logged.flatMap(m => m.foods?.map(f => f.foodName) ?? [m.name]).slice(0, 3).join(' · ')}
+                            {logged.length > 3 ? ` ${t('diet.plusMore', { n: logged.length - 3 })}` : ''}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: FG.accent, marginTop: 3, fontWeight: 600 }}>+ {t('diet.logFood')}</div>
+                        )}
+                      </div>
+                      {hasItems && (
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div className="num" style={{ fontSize: 18 }}>{Math.round(slotKcal)}</div>
+                            <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{t('diet.kcalLabel')}</div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <FBadge tone="accent">{Math.round(slotP)}P</FBadge>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    {hasItems && (
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div className="num" style={{ fontSize: 18 }}>{Math.round(slotKcal)}</div>
-                          <div style={{ fontSize: 10, color: FG.dim, fontFamily: 'JetBrains Mono, monospace' }}>{t('diet.kcalLabel')}</div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <FBadge tone="accent">{Math.round(slotP)}P</FBadge>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </FCard>
+                  </FCard>
+                </div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {logModalMeal && (
+        <FoodLogModal
+          mealName={logModalMeal}
+          onClose={() => setLogModalMeal(null)}
+          onLogged={refreshLog}
+        />
+      )}
     </div>
   );
 }
