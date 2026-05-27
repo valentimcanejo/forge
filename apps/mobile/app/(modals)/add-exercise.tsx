@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Svg, { Path, Circle } from 'react-native-svg';
@@ -27,8 +27,12 @@ const ICONS = ['⚒', '◧', '⚙', '◬', '◯', '◫', '◪', '◰', '✦', '�
 function ExerciseRow({ exercise, onAdd }: { exercise: Exercise; onAdd: () => void }) {
   return (
     <View style={{ backgroundColor: FG.bg1, borderRadius: 14, borderWidth: 1, borderColor: FG.line, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: FG.bg2, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 20 }}>⚒</Text>
+      <View style={{ width: 44, height: 44, borderRadius: 11, backgroundColor: FG.bg2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {exercise.imageUrl ? (
+          <Image source={{ uri: exercise.imageUrl }} style={{ width: 44, height: 44 }} resizeMode="cover"/>
+        ) : (
+          <Text style={{ fontSize: 20 }}>⚒</Text>
+        )}
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

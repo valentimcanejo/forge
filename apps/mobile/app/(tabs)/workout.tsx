@@ -31,6 +31,8 @@ export default function WorkoutScreen() {
   const [finishing, setFinishing] = useState(false);
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeSessionRef = useRef(activeSession);
+  activeSessionRef.current = activeSession;
 
   // Load recent sessions if no active session
   useEffect(() => {
@@ -46,9 +48,10 @@ export default function WorkoutScreen() {
     return () => clearInterval(timerRef.current!);
   }, [activeSession, paused]);
 
-  // Sync exercises into store when they change
+  // Sync exercises into store when they change (use ref to avoid stale closure)
   useEffect(() => {
-    if (activeSession) setActiveSession({ ...activeSession, exercises });
+    const s = activeSessionRef.current;
+    if (s) setActiveSession({ ...s, exercises });
   }, [exercises]);
 
   // Pick up exercises added from the add-exercise modal
@@ -66,17 +69,30 @@ export default function WorkoutScreen() {
 
   async function startSession() {
     if (!user) return;
-    const session: Omit<WorkoutSession, 'id' | 'uid'> = {
+    const startedAt = new Date();
+    const session: WorkoutSession = {
+      id: `local_${Date.now()}`,
+      uid: user.uid,
       name: 'Workout',
-      startedAt: new Date(),
+      planName: '',
+      dayType: '',
+      startedAt,
       exercises: [],
       totalVolumeKg: 0,
-    } as any;
-    const id = await createWorkoutSession(user.uid, session);
-    setActiveSession({ ...session, id, uid: user.uid } as WorkoutSession);
+    };
+    setActiveSession(session);
     setElapsed(0);
     setPaused(false);
     setExercises([]);
+    // Persist to Firestore in background; session stays active locally on failure
+    createWorkoutSession(user.uid, {
+      name: session.name, planName: session.planName, dayType: session.dayType,
+      startedAt: session.startedAt, exercises: [], totalVolumeKg: 0,
+    }).then(id => {
+      if (activeSessionRef.current) setActiveSession({ ...activeSessionRef.current, id });
+    }).catch(e => {
+      console.warn('Could not save session to Firestore:', e);
+    });
   }
 
   async function finishSession() {
@@ -93,7 +109,12 @@ export default function WorkoutScreen() {
         durationSeconds: elapsed,
         totalVolumeKg: totalVolume,
       };
-      await updateWorkoutSession(user.uid, activeSession.id, completed);
+      if (activeSession.id.startsWith('local_')) {
+        const id = await createWorkoutSession(user.uid, { ...completed } as any);
+        completed.id = id;
+      } else {
+        await updateWorkoutSession(user.uid, activeSession.id, completed);
+      }
       const newGamification = await processWorkoutComplete(user.uid, completed);
       setGamification(newGamification);
       setActiveSession(null);
@@ -302,7 +323,7 @@ export default function WorkoutScreen() {
                             <TextInput
                               value={set.weightKg ? set.weightKg.toString() : ''}
                               onChangeText={v => updateSetValue(exIdx, setIdx, 'weightKg', v)}
-                              keyboardType="numeric"
+                              keyboardType="decimal-pad"
                               placeholder="0"
                               placeholderTextColor={FG.dim}
                               style={{ flex: 1, color: FG.text, fontSize: 14, fontWeight: '600' }}
@@ -313,7 +334,7 @@ export default function WorkoutScreen() {
                             <TextInput
                               value={set.reps ? set.reps.toString() : ''}
                               onChangeText={v => updateSetValue(exIdx, setIdx, 'reps', v)}
-                              keyboardType="numeric"
+                              keyboardType="number-pad"
                               placeholder="0"
                               placeholderTextColor={FG.dim}
                               style={{ flex: 1, color: FG.text, fontSize: 14, fontWeight: '600' }}

@@ -124,7 +124,7 @@ export default function AddFoodModal() {
       const entry: FoodEntry = {
         foodId: food.id,
         foodName: food.name,
-        brand: food.brand,
+        ...(food.brand ? { brand: food.brand } : {}),
         servingG: serving,
         servingLabel: food.servingLabel ?? `${serving}g`,
         kcal: macros.kcal,
@@ -347,7 +347,7 @@ export default function AddFoodModal() {
               <TextInput
                 value={fserving}
                 onChangeText={setFserving}
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
                 style={{ backgroundColor: FG.bg1, borderWidth: 1, borderColor: FG.line, borderRadius: 10, padding: 12, color: FG.text, fontSize: 14 }}
               />
             </View>
@@ -383,7 +383,7 @@ export default function AddFoodModal() {
                     <TextInput
                       value={m.value}
                       onChangeText={m.set}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                       placeholder="0"
                       placeholderTextColor={FG.dim}
                       style={{ color: FG.text, fontSize: 15, fontWeight: '700', textAlign: 'right', minWidth: 50 }}
