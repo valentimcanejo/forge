@@ -16,6 +16,8 @@ import type { FirebaseError } from 'firebase/app';
 WebBrowser.maybeCompleteAuthSession();
 
 const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+const ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
 function ForgeLogo({ size = 36 }: { size?: number }) {
   return (
@@ -38,9 +40,8 @@ export default function LoginScreen() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: WEB_CLIENT_ID,
-    // Para builds nativos (não Expo Go), adiciona:
-    // iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    // androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
   });
 
   // Quando o OAuth regressa com sucesso, autentica no Firebase
@@ -75,7 +76,11 @@ export default function LoginScreen() {
 
   async function handleGoogle() {
     setError('');
-    await promptAsync();
+    try {
+      await promptAsync();
+    } catch (e: any) {
+      setError(e?.message ?? 'Google sign-in failed');
+    }
   }
 
   return (
@@ -176,11 +181,8 @@ export default function LoginScreen() {
           </View>
 
           {/* Register link */}
-          <TouchableOpacity onPress={() => router.replace('/(auth)/onboarding')} style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 13, color: FG.mid }}>
-              Sem conta?{' '}
-              <Text style={{ color: FG.accent, fontWeight: '600' }}>Começa a treinar →</Text>
-            </Text>
+          <TouchableOpacity onPress={() => router.back()} style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: FG.mid }}>← Voltar</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -31,7 +31,7 @@ export default function OnboardingScreen() {
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 24, marginTop: 12 }}>
           <Text style={{ fontSize: 11, color: FG.dim, letterSpacing: 1.5 }}>STEP 1 / 5</Text>
-          <TouchableOpacity><Text style={{ fontSize: 11, color: FG.accent, letterSpacing: 1.2 }}>SKIP</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}><Text style={{ fontSize: 11, color: FG.accent, letterSpacing: 1.2 }}>SKIP</Text></TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -65,21 +65,23 @@ export default function OnboardingScreen() {
 
       {/* CTA */}
       <View style={{ paddingHorizontal: 24, paddingBottom: 48, gap: 10 }}>
-        <FButton size="lg" fullWidth onPress={() => router.replace('/(tabs)')}>
+        <FButton size="lg" fullWidth onPress={() => router.push('/(auth)/login')}>
           {t('auth.startTraining')}
         </FButton>
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <FButton variant="ghost" style={{ flex: 1 }} onPress={() => {}}>
+          <FButton variant="ghost" style={{ flex: 1 }} onPress={() => router.push('/(auth)/login')}>
             {t('auth.continueWithGoogle')}
           </FButton>
-          <FButton variant="ghost" style={{ flex: 1 }} onPress={() => {}}>
+          <FButton variant="ghost" style={{ flex: 1 }} onPress={() => router.push('/(auth)/login')}>
             {t('auth.continueWithApple')}
           </FButton>
         </View>
-        <Text style={{ textAlign: 'center', color: FG.dim, fontSize: 13, marginTop: 4 }}>
-          {t('auth.haveAccount')}{' '}
-          <Text style={{ color: FG.accent, fontWeight: '600' }}>{t('auth.login')}</Text>
-        </Text>
+        <TouchableOpacity onPress={() => router.push('/(auth)/login')} style={{ marginTop: 4 }}>
+          <Text style={{ textAlign: 'center', color: FG.dim, fontSize: 13 }}>
+            {t('auth.haveAccount')}{' '}
+            <Text style={{ color: FG.accent, fontWeight: '600' }}>{t('auth.login')}</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
