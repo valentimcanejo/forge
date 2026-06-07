@@ -42,6 +42,22 @@ export async function addMealToLog(uid: string, date: string, meal: MealLog): Pr
   await upsertDailyLog(uid, date, { meals, ...totals });
 }
 
+export async function removeMealEntry(uid: string, date: string, mealLogId: string): Promise<void> {
+  const log = await getDailyLog(uid, date);
+  if (!log) return;
+  const meals = (log.meals ?? []).filter(m => m.id !== mealLogId);
+  const totals = meals.reduce(
+    (acc, m) => ({
+      totalKcal: acc.totalKcal + m.totalKcal,
+      totalProteinG: acc.totalProteinG + m.totalProteinG,
+      totalCarbsG: acc.totalCarbsG + m.totalCarbsG,
+      totalFatG: acc.totalFatG + m.totalFatG,
+    }),
+    { totalKcal: 0, totalProteinG: 0, totalCarbsG: 0, totalFatG: 0 }
+  );
+  await upsertDailyLog(uid, date, { meals, ...totals });
+}
+
 export async function logWater(uid: string, date: string, addMl: number): Promise<void> {
   const log = await getDailyLog(uid, date);
   const currentMl = log?.waterMl ?? 0;

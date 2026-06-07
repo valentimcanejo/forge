@@ -73,8 +73,9 @@ function FoodRow({ food, onAdd }: { food: Food; onAdd: () => void }) {
 
 export default function AddFoodModal() {
   const { user, setTodayLog } = useStore();
-  const params = useLocalSearchParams<{ meal?: string }>();
+  const params = useLocalSearchParams<{ meal?: string; date?: string }>();
   const mealName = params.meal ?? 'Lunch';
+  const targetDate = params.date ?? today();
 
   const [screen, setScreen] = useState<Screen>('search');
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,9 +146,7 @@ export default function AddFoodModal() {
         totalFatG: macros.fatG,
         completed: false,
       };
-      await addMealToLog(user.uid, today(), mealLog);
-      const updated = await getDailyLog(user.uid, today());
-      if (updated) setTodayLog(updated);
+      await addMealToLog(user.uid, targetDate, mealLog);
       router.back();
     } catch {
       Alert.alert('Error', 'Failed to log food. Please try again.');
