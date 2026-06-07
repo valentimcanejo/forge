@@ -49,6 +49,20 @@ export async function updateRoutine(uid: string, routineId: string, data: Partia
   });
 }
 
+export async function getRoutine(uid: string, routineId: string): Promise<WorkoutRoutine | null> {
+  const ref = doc(db, 'users', uid, 'routines', routineId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    ...data,
+    id: snap.id,
+    createdAt: (data.createdAt as Timestamp).toDate(),
+    updatedAt: (data.updatedAt as Timestamp).toDate(),
+    lastUsedAt: data.lastUsedAt ? (data.lastUsedAt as Timestamp).toDate() : undefined,
+  } as WorkoutRoutine;
+}
+
 export async function deleteRoutine(uid: string, routineId: string): Promise<void> {
   await deleteDoc(doc(db, 'users', uid, 'routines', routineId));
 }

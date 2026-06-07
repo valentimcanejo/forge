@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Svg, { Path } from 'react-native-svg';
 import { FG } from '@/constants/theme';
-import { FCard, FBadge, FProgress, FButton } from '@/components/ui';
+import { FButton } from '@/components/ui';
 import { useStore } from '@/store/useStore';
 import {
   createWorkoutSession, updateWorkoutSession, processWorkoutComplete,
-  getRecentWorkouts,
+  getRecentWorkouts, getRoutines, incrementRoutineUsage,
 } from '@forge/common';
-import type { WorkoutSession, WorkoutExercise, SetLog } from '@forge/common';
+import type { WorkoutSession, WorkoutExercise, WorkoutRoutine } from '@forge/common';
 
 function fmt(secs: number) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -18,10 +18,60 @@ function fmt(secs: number) {
   return `${m}:${s}`;
 }
 
-function today() { return new Date().toISOString().slice(0, 10); }
+// ── Routine card ──────────────────────────────────────────────────────────────
+function RoutineCard({
+  routine, onStart, onEdit,
+}: {
+  routine: WorkoutRoutine;
+  onStart: () => void;
+  onEdit: () => void;
+}) {
+  const muscles = [...new Set(routine.exercises.map(e => e.muscleGroup))].slice(0, 3);
+  const exNames = routine.exercises.slice(0, 2).map(e => e.exerciseName).join(' · ');
+  return (
+    <View style={{ backgroundColor: FG.bg1, borderRadius: 16, borderWidth: 1, borderColor: FG.line, padding: 16 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: FG.text }}>{routine.name}</Text>
+          <Text style={{ fontSize: 12, color: FG.dim, marginTop: 3 }}>
+            {routine.exercises.length} exercício{routine.exercises.length !== 1 ? 's' : ''}
+            {routine.timesUsed > 0 ? ` · ${routine.timesUsed}× usado` : ''}
+          </Text>
+          {exNames ? (
+            <Text style={{ fontSize: 11, color: FG.mid, marginTop: 4 }} numberOfLines={1}>{exNames}{routine.exercises.length > 2 ? '…' : ''}</Text>
+          ) : null}
+          {muscles.length > 0 && (
+            <View style={{ flexDirection: 'row', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+              {muscles.map(m => (
+                <View key={m} style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(249,115,22,0.1)', borderWidth: 1, borderColor: 'rgba(249,115,22,0.2)' }}>
+                  <Text style={{ fontSize: 10, color: FG.accent }}>{m}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          onPress={onEdit}
+          style={{ padding: 6, marginLeft: 8 }}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+        >
+          <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={FG.dim} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <Path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/>
+          </Svg>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity
+        onPress={onStart}
+        style={{ backgroundColor: 'rgba(249,115,22,0.12)', borderWidth: 1, borderColor: 'rgba(249,115,22,0.3)', borderRadius: 10, paddingVertical: 11, alignItems: 'center' }}
+      >
+        <Text style={{ fontSize: 13, fontWeight: '700', color: FG.accent, letterSpacing: 0.3 }}>Iniciar treino →</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
-const DAYS_ABBR = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function WorkoutScreen() {
   const { user, activeSession, setActiveSession, setGamification } = useStore();
   const [elapsed, setElapsed] = useState(0);
@@ -30,15 +80,36 @@ export default function WorkoutScreen() {
   const [expandedEx, setExpandedEx] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [recentSessions, setRecentSessions] = useState<WorkoutSession[]>([]);
+  const [routines, setRoutines] = useState<WorkoutRoutine[]>([]);
+
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeSessionRef = useRef(activeSession);
+  const activeRoutineIdRef = useRef<string | null>(null);
   activeSessionRef.current = activeSession;
 
-  // Load recent sessions if no active session
+  // Load idle data (routines + recent sessions) when not in a session
   useEffect(() => {
     if (!user || activeSession) return;
     getRecentWorkouts(user.uid, 5).then(setRecentSessions).catch(() => {});
+    getRoutines(user.uid).then(setRoutines).catch(() => {});
   }, [user, activeSession]);
+
+  // Refresh routines on focus (user may have created/edited one)
+  useFocusEffect(
+    useCallback(() => {
+      if (activeSession) {
+        // Pick up exercises added from the add-exercise modal
+        const storeExs = activeSession.exercises ?? [];
+        setExercises(prev => {
+          const prevIds = new Set(prev.map(e => e.exerciseId));
+          const added = storeExs.filter(e => !prevIds.has(e.exerciseId));
+          return added.length > 0 ? [...prev, ...added] : prev;
+        });
+      } else {
+        if (user) getRoutines(user.uid).then(setRoutines).catch(() => {});
+      }
+    }, [activeSession?.exercises?.length, !!activeSession, user])
+  );
 
   // Timer
   useEffect(() => {
@@ -48,51 +119,60 @@ export default function WorkoutScreen() {
     return () => clearInterval(timerRef.current!);
   }, [activeSession, paused]);
 
-  // Sync exercises into store when they change (use ref to avoid stale closure)
+  // Sync local exercises into store
   useEffect(() => {
     const s = activeSessionRef.current;
     if (s) setActiveSession({ ...s, exercises });
   }, [exercises]);
 
-  // Pick up exercises added from the add-exercise modal
-  useFocusEffect(
-    useCallback(() => {
-      if (!activeSession) return;
-      const storeExs = activeSession.exercises ?? [];
-      setExercises(prev => {
-        const prevIds = new Set(prev.map(e => e.exerciseId));
-        const added = storeExs.filter(e => !prevIds.has(e.exerciseId));
-        return added.length > 0 ? [...prev, ...added] : prev;
-      });
-    }, [activeSession?.exercises?.length])
-  );
-
-  async function startSession() {
+  async function startSession(routine?: WorkoutRoutine) {
     if (!user) return;
     const startedAt = new Date();
+
+    let initialExercises: WorkoutExercise[] = [];
+    if (routine) {
+      activeRoutineIdRef.current = routine.id;
+      initialExercises = routine.exercises
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((re, idx) => ({
+          exerciseId: re.exerciseId,
+          exerciseName: re.exerciseName,
+          muscleGroup: re.muscleGroup,
+          order: idx,
+          sets: Array.from({ length: re.targetSets }, (_, i) => ({
+            setNumber: i + 1,
+            reps: re.repsMin,
+            weightKg: re.startingWeightKg ?? 0,
+            completed: false,
+            isWarmup: false,
+          })),
+        }));
+    } else {
+      activeRoutineIdRef.current = null;
+    }
+
     const session: WorkoutSession = {
       id: `local_${Date.now()}`,
       uid: user.uid,
-      name: 'Workout',
+      name: routine?.name ?? 'Treino',
       planName: '',
       dayType: '',
       startedAt,
-      exercises: [],
+      exercises: initialExercises,
       totalVolumeKg: 0,
     };
     setActiveSession(session);
     setElapsed(0);
     setPaused(false);
-    setExercises([]);
-    // Persist to Firestore in background; session stays active locally on failure
+    setExercises(initialExercises);
+
     createWorkoutSession(user.uid, {
       name: session.name, planName: session.planName, dayType: session.dayType,
-      startedAt: session.startedAt, exercises: [], totalVolumeKg: 0,
+      startedAt: session.startedAt, exercises: initialExercises, totalVolumeKg: 0,
     }).then(id => {
       if (activeSessionRef.current) setActiveSession({ ...activeSessionRef.current, id });
-    }).catch(e => {
-      console.warn('Could not save session to Firestore:', e);
-    });
+    }).catch(e => console.warn('Could not save session to Firestore:', e));
   }
 
   async function finishSession() {
@@ -103,25 +183,30 @@ export default function WorkoutScreen() {
         acc + ex.sets.reduce((s, set) => s + (set.weightKg ?? 0) * (set.reps ?? 0), 0), 0);
 
       const completed: WorkoutSession = {
-        ...activeSession,
-        exercises,
-        completedAt: new Date(),
-        durationSeconds: elapsed,
-        totalVolumeKg: totalVolume,
+        ...activeSession, exercises,
+        completedAt: new Date(), durationSeconds: elapsed, totalVolumeKg: totalVolume,
       };
+
       if (activeSession.id.startsWith('local_')) {
         const id = await createWorkoutSession(user.uid, { ...completed } as any);
         completed.id = id;
       } else {
         await updateWorkoutSession(user.uid, activeSession.id, completed);
       }
+
       const newGamification = await processWorkoutComplete(user.uid, completed);
       setGamification(newGamification);
+
+      if (activeRoutineIdRef.current) {
+        incrementRoutineUsage(user.uid, activeRoutineIdRef.current).catch(() => {});
+        activeRoutineIdRef.current = null;
+      }
+
       setActiveSession(null);
       setElapsed(0);
       setExercises([]);
-      Alert.alert('Sessão concluída! 💪', `+30 XP ganho${totalVolume > 0 ? `\nVolume: ${Math.round(totalVolume)} kg` : ''}`);
-    } catch (e) {
+      Alert.alert('Sessão concluída! 💪', totalVolume > 0 ? `Volume: ${Math.round(totalVolume)} kg` : 'Bom trabalho!');
+    } catch {
       Alert.alert('Erro', 'Não foi possível guardar o treino.');
     } finally {
       setFinishing(false);
@@ -145,72 +230,66 @@ export default function WorkoutScreen() {
     }));
   }
 
-  // Week day strip
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(now.getDate() - dayOfWeek + i);
-    return { label: DAYS_ABBR[i], num: d.getDate(), isToday: i === dayOfWeek };
-  });
-
-  // ── NO ACTIVE SESSION ──────────────────────────────────────────
+  // ── IDLE STATE ────────────────────────────────────────────────────────────
   if (!activeSession) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: FG.bg0 }} edges={['top']}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 8, marginBottom: 14 }}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: FG.text, letterSpacing: -0.5 }}>Lift</Text>
-          <Text style={{ fontSize: 13, color: FG.dim, marginTop: 2 }}>Track your session</Text>
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, marginBottom: 20 }}>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: FG.text, letterSpacing: -0.5 }}>Treino</Text>
         </View>
 
-        {/* Week strip */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 20, marginBottom: 20 }}>
-          {weekDays.map((d, i) => (
-            <View key={i} style={{
-              width: 44, paddingVertical: 10, borderRadius: 12,
-              backgroundColor: d.isToday ? FG.accent : FG.bg1,
-              borderWidth: d.isToday ? 0 : 1, borderColor: FG.line, alignItems: 'center',
-            }}>
-              <Text style={{ fontSize: 10, fontWeight: '600', color: d.isToday ? '#1a0a00' : FG.mid }}>{d.label}</Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: d.isToday ? '#1a0a00' : FG.text, marginTop: 2 }}>{d.num}</Text>
-            </View>
-          ))}
-        </ScrollView>
-
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}>
-          {/* Start button */}
-          <TouchableOpacity
-            onPress={startSession}
-            style={{
-              backgroundColor: FG.accent, borderRadius: 18, padding: 24,
-              alignItems: 'center', marginBottom: 20,
-              shadowColor: FG.accent, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 16,
-            }}
-          >
-            <Text style={{ fontSize: 13, color: '#1a0a00', letterSpacing: 1.2, fontWeight: '700', opacity: 0.7 }}>TAP TO BEGIN</Text>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: '#1a0a00', letterSpacing: -0.5, marginTop: 4 }}>Start Session</Text>
-            <Text style={{ fontSize: 12, color: '#1a0a00', opacity: 0.6, marginTop: 4 }}>+30 XP on complete · +50 XP per PR</Text>
-          </TouchableOpacity>
+
+          {/* Routines */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={{ fontSize: 10, color: FG.dim, letterSpacing: 1.2, textTransform: 'uppercase' }}>Rotinas</Text>
+            <TouchableOpacity onPress={() => router.push('/(modals)/manage-routine')}>
+              <Text style={{ fontSize: 13, color: FG.accent, fontWeight: '600' }}>+ Nova</Text>
+            </TouchableOpacity>
+          </View>
+
+          {routines.length > 0 ? (
+            <View style={{ gap: 10, marginBottom: 28 }}>
+              {routines.map(r => (
+                <RoutineCard
+                  key={r.id}
+                  routine={r}
+                  onStart={() => startSession(r)}
+                  onEdit={() => router.push({ pathname: '/(modals)/manage-routine', params: { routineId: r.id } })}
+                />
+              ))}
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push('/(modals)/manage-routine')}
+              style={{ padding: 14, borderRadius: 14, marginBottom: 28, borderWidth: 1.5, borderStyle: 'dashed', borderColor: FG.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Text style={{ fontSize: 22, color: FG.dim }}>+</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: FG.mid }}>Criar primeira rotina</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Recent sessions */}
           {recentSessions.length > 0 && (
             <View>
-              <Text style={{ fontSize: 10, color: FG.dim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 }}>Recent Sessions</Text>
+              <Text style={{ fontSize: 10, color: FG.dim, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 12 }}>Histórico</Text>
               <View style={{ gap: 8 }}>
                 {recentSessions.map(s => (
                   <View key={s.id} style={{ backgroundColor: FG.bg1, borderRadius: 14, borderWidth: 1, borderColor: FG.line, padding: 14 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <View>
-                        <Text style={{ fontSize: 15, fontWeight: '700', color: FG.text }}>{s.name || 'Workout'}</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: FG.text }}>{s.name || 'Treino'}</Text>
                         <Text style={{ fontSize: 12, color: FG.dim, marginTop: 2 }}>
-                          {new Date(s.startedAt).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                          {new Date(s.startedAt).toLocaleDateString('pt', { month: 'short', day: 'numeric' })}
                           {s.durationSeconds ? ` · ${fmt(s.durationSeconds)}` : ''}
                         </Text>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: FG.accent }}>{s.exercises?.length ?? 0} lifts</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: FG.accent }}>
+                          {s.exercises?.length ?? 0} ex
+                        </Text>
                         {s.totalVolumeKg > 0 && (
-                          <Text style={{ fontSize: 11, color: FG.dim }}>{Math.round(s.totalVolumeKg)} kg vol</Text>
+                          <Text style={{ fontSize: 11, color: FG.dim }}>{Math.round(s.totalVolumeKg)} kg</Text>
                         )}
                       </View>
                     </View>
@@ -220,11 +299,11 @@ export default function WorkoutScreen() {
             </View>
           )}
 
-          {recentSessions.length === 0 && (
-            <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-              <Text style={{ fontSize: 32, marginBottom: 12 }}>⚒</Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: FG.text }}>No sessions yet</Text>
-              <Text style={{ fontSize: 13, color: FG.mid, marginTop: 6 }}>Start your first workout above.</Text>
+          {recentSessions.length === 0 && routines.length === 0 && (
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+              <Text style={{ fontSize: 13, color: FG.dim, textAlign: 'center' }}>
+                Cria uma rotina ou começa uma sessão livre para registar o teu primeiro treino.
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -232,7 +311,7 @@ export default function WorkoutScreen() {
     );
   }
 
-  // ── ACTIVE SESSION ─────────────────────────────────────────────
+  // ── ACTIVE SESSION ────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: FG.bg0 }} edges={['top']}>
       {/* Session header */}
@@ -240,18 +319,18 @@ export default function WorkoutScreen() {
         <TouchableOpacity
           onPress={() => Alert.alert('Cancelar?', 'O progresso será perdido.', [
             { text: 'Não', style: 'cancel' },
-            { text: 'Cancelar sessão', style: 'destructive', onPress: () => { setActiveSession(null); setElapsed(0); setExercises([]); } },
+            { text: 'Cancelar sessão', style: 'destructive', onPress: () => { setActiveSession(null); setElapsed(0); setExercises([]); activeRoutineIdRef.current = null; } },
           ])}
           style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: FG.bg1, borderWidth: 1, borderColor: FG.line, alignItems: 'center', justifyContent: 'center' }}
         >
           <Text style={{ color: FG.text, fontSize: 16 }}>✕</Text>
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 11, color: FG.dim, letterSpacing: 0.8 }}>SESSION ACTIVE</Text>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: FG.text }}>Workout</Text>
+          <Text style={{ fontSize: 11, color: FG.dim, letterSpacing: 0.8 }}>EM CURSO</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: FG.text }}>{activeSession.name}</Text>
         </View>
         <FButton size="sm" onPress={finishSession} disabled={finishing}>
-          {finishing ? '…' : 'Finish'}
+          {finishing ? '…' : 'Terminar'}
         </FButton>
       </View>
 
@@ -260,11 +339,11 @@ export default function WorkoutScreen() {
         <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
           <View style={{ backgroundColor: 'rgba(249,115,22,0.08)', borderWidth: 1, borderColor: 'rgba(249,115,22,0.3)', borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ fontSize: 11, color: FG.accent, letterSpacing: 0.8 }}>{paused ? 'PAUSED' : 'SESSION ACTIVE'}</Text>
+              <Text style={{ fontSize: 11, color: FG.accent, letterSpacing: 0.8 }}>{paused ? 'PAUSADO' : 'EM CURSO'}</Text>
               <Text style={{ fontSize: 32, fontWeight: '700', color: FG.text, letterSpacing: -1, marginTop: 2 }}>{fmt(elapsed)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 11, color: FG.dim }}>SETS DONE</Text>
+              <Text style={{ fontSize: 11, color: FG.dim }}>SÉRIES FEITAS</Text>
               <Text style={{ fontSize: 20, fontWeight: '700', color: FG.text }}>
                 {exercises.reduce((a, ex) => a + ex.sets.filter(s => s.completed).length, 0)}
               </Text>
@@ -296,12 +375,12 @@ export default function WorkoutScreen() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: allDone ? 'rgba(94,209,154,0.15)' : FG.bg2, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: allDone ? 'rgba(94,209,154,0.4)' : FG.line }}>
-                    <Text style={{ fontSize: 12, color: allDone ? FG.ok : FG.dim }}>{ allDone ? '✓' : (exIdx + 1).toString()}</Text>
+                    <Text style={{ fontSize: 12, color: allDone ? FG.ok : FG.dim }}>{allDone ? '✓' : (exIdx + 1).toString()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '600', fontSize: 15, color: FG.text, textDecorationLine: allDone ? 'line-through' : 'none' }}>{ex.exerciseName}</Text>
                     <Text style={{ fontSize: 12, color: FG.dim, marginTop: 2 }}>
-                      {ex.sets.length} sets · {ex.sets.filter(s => s.completed).length} done
+                      {ex.sets.length} séries · {ex.sets.filter(s => s.completed).length} feitas
                     </Text>
                   </View>
                   <Text style={{ fontSize: 12, color: FG.mid }}>{isExpanded ? '▲' : '▼'}</Text>
@@ -317,7 +396,7 @@ export default function WorkoutScreen() {
                         >
                           {set.completed && <Text style={{ color: '#fff', fontSize: 12 }}>✓</Text>}
                         </TouchableOpacity>
-                        <Text style={{ fontSize: 11, color: FG.dim, width: 40 }}>SET {setIdx + 1}</Text>
+                        <Text style={{ fontSize: 11, color: FG.dim, width: 40 }}>SÉR {setIdx + 1}</Text>
                         <View style={{ flex: 1, flexDirection: 'row', gap: 6 }}>
                           <View style={{ flex: 1, backgroundColor: FG.bg2, borderRadius: 8, borderWidth: 1, borderColor: FG.line, paddingHorizontal: 8, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}>
                             <TextInput
@@ -346,11 +425,14 @@ export default function WorkoutScreen() {
                     ))}
                     <TouchableOpacity
                       onPress={() => {
-                        setExercises(prev => prev.map((e, i) => i === exIdx ? { ...e, sets: [...e.sets, { setNumber: e.sets.length + 1, reps: 0, weightKg: 0, completed: false, isWarmup: false }] } : e));
+                        setExercises(prev => prev.map((e, i) => i !== exIdx ? e : {
+                          ...e,
+                          sets: [...e.sets, { setNumber: e.sets.length + 1, reps: e.sets.at(-1)?.reps ?? 0, weightKg: e.sets.at(-1)?.weightKg ?? 0, completed: false, isWarmup: false }],
+                        }));
                       }}
                       style={{ paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: FG.line, borderStyle: 'dashed', alignItems: 'center', marginTop: 4 }}
                     >
-                      <Text style={{ fontSize: 12, color: FG.dim }}>+ Add set</Text>
+                      <Text style={{ fontSize: 12, color: FG.dim }}>+ Adicionar série</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -363,7 +445,7 @@ export default function WorkoutScreen() {
             style={{ padding: 14, borderRadius: 14, marginTop: 4, borderWidth: 1.5, borderStyle: 'dashed', borderColor: FG.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           >
             <Text style={{ fontSize: 18, color: FG.mid }}>+</Text>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: FG.mid }}>Add exercise</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: FG.mid }}>Adicionar exercício</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

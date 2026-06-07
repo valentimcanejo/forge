@@ -74,7 +74,7 @@ function AuthGate() {
     if (!user && !inAuth) {
       router.replace("/(auth)/onboarding");
     } else if (user && inAuth) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/workout");
     }
   }, [user, authLoading, segments]);
 
@@ -89,6 +89,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/link-account" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
+        <Stack.Screen name="(modals)/manage-routine" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
         <Stack.Screen
           name="notifications"
           options={{ animation: "slide_from_right" }}
