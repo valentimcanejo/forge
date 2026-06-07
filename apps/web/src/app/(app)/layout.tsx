@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { GuestBanner } from '@/components/layout/GuestBanner';
 import { useAuthStore } from '@/store/authStore';
 import { FG } from '@/components/ui';
 
@@ -29,12 +30,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Sidebar/>
       <main style={{
         flex: 1,
-        marginLeft: 220,
+        marginLeft: 200,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         minHeight: 0,
       }}>
+        <GuestBanner/>
         {children}
       </main>
     </div>
