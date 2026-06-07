@@ -1,6 +1,10 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInAnonymously,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider,
   signOut,
   GoogleAuthProvider,
   OAuthProvider,
@@ -40,6 +44,35 @@ export async function loginWithApple(): Promise<User> {
   return cred.user;
 }
 
+export async function signInAnonymousUser(): Promise<User> {
+  const cred = await signInAnonymously(auth);
+  await createUserDocument(cred.user);
+  return cred.user;
+}
+
+export async function linkAnonymousWithEmail(email: string, password: string, displayName: string): Promise<User> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('No current user');
+  const credential = EmailAuthProvider.credential(email, password);
+  const cred = await linkWithCredential(currentUser, credential);
+  await updateProfile(cred.user, { displayName });
+  await updateUserProfile(cred.user.uid, { email, displayName, isAnonymous: false });
+  return cred.user;
+}
+
+export async function linkAnonymousWithGoogle(): Promise<User> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error('No current user');
+  const cred = await linkWithPopup(currentUser, googleProvider);
+  await updateUserProfile(cred.user.uid, {
+    email: cred.user.email ?? '',
+    displayName: cred.user.displayName ?? '',
+    photoURL: cred.user.photoURL ?? undefined,
+    isAnonymous: false,
+  });
+  return cred.user;
+}
+
 export async function logout(): Promise<void> {
   await signOut(auth);
 }
@@ -54,6 +87,7 @@ async function createUserDocument(user: User): Promise<void> {
     email: user.email ?? '',
     displayName: user.displayName ?? '',
     photoURL: user.photoURL ?? undefined,
+    isAnonymous: user.isAnonymous,
     joinedAt: new Date(),
     fitnessLevel: 'beginner',
     goal: 'gain',

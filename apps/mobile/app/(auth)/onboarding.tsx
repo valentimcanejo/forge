@@ -1,9 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FG } from '@/constants/theme';
 import { FButton } from '@/components/ui';
+import { signInAnonymousUser } from '@forge/common';
 
 const FEATURES = [
   { icon: '⚒', key: 'auth.feature1' },
@@ -14,6 +16,17 @@ const FEATURES = [
 export default function OnboardingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function handleStart() {
+    setLoading(true);
+    try {
+      await signInAnonymousUser();
+      // AuthGate detects user && inAuth → redirects to /(tabs) automatically
+    } catch {
+      setLoading(false);
+    }
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: FG.bg0 }}>
@@ -65,8 +78,8 @@ export default function OnboardingScreen() {
 
       {/* CTA */}
       <View style={{ paddingHorizontal: 24, paddingBottom: 48, gap: 10 }}>
-        <FButton size="lg" fullWidth onPress={() => router.push('/(auth)/login')}>
-          {t('auth.startTraining')}
+        <FButton size="lg" fullWidth onPress={handleStart} disabled={loading}>
+          {loading ? <ActivityIndicator color="#fff" size="small" /> : t('auth.startTraining')}
         </FButton>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <FButton variant="ghost" style={{ flex: 1 }} onPress={() => router.push('/(auth)/login')}>

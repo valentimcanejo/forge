@@ -14,6 +14,7 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
+  isAnonymous?: boolean;
   photoURL?: string;
   handle?: string;
   joinedAt: Date;

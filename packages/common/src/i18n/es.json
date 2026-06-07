@@ -58,7 +58,15 @@
     "googleFailed": "Error al iniciar sesión con Google",
     "registerFailed": "Error en el registro",
     "registerHeading": "Comienza tu camino",
-    "registerSubtitle": "Hecho para los que entrenan natural."
+    "registerSubtitle": "Hecho para los que entrenan natural.",
+    "continueAsGuest": "Continuar sin cuenta",
+    "guestBanner": "Modo invitado — los datos pueden perderse si desinstala la app",
+    "saveProgress": "Guardar progreso",
+    "linkHeading": "No pierdas tus datos",
+    "linkSubtitle": "Crea una cuenta para sincronizar entre dispositivos y mantener tu historial seguro.",
+    "linkingAccount": "Vinculando cuenta…",
+    "linkingFailed": "Error al vincular cuenta",
+    "linkSuccess": "¡Cuenta guardada!"
   },
   "onboarding": {
     "step": "Paso {{current}} / {{total}}",

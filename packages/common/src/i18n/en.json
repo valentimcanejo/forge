@@ -58,7 +58,15 @@
     "googleFailed": "Google sign-in failed",
     "registerFailed": "Registration failed",
     "registerHeading": "Start your journey",
-    "registerSubtitle": "Built for lifters who do it clean."
+    "registerSubtitle": "Built for lifters who do it clean.",
+    "continueAsGuest": "Continue without account",
+    "guestBanner": "Guest mode — data may be lost if you uninstall",
+    "saveProgress": "Save your progress",
+    "linkHeading": "Don't lose your data",
+    "linkSubtitle": "Create an account to sync across devices and keep your history safe.",
+    "linkingAccount": "Linking account…",
+    "linkingFailed": "Failed to link account",
+    "linkSuccess": "Account saved!"
   },
   "onboarding": {
     "step": "Step {{current}} / {{total}}",

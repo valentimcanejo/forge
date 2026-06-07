@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { registerWithEmail, loginWithGoogle } from '@forge/common';
+import { registerWithEmail, loginWithGoogle, linkAnonymousWithEmail, linkAnonymousWithGoogle, auth } from '@forge/common';
 import { ForgeLogo, FButton, FG } from '@/components/ui';
 
 export default function RegisterPage() {
@@ -15,12 +15,18 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const isAnonymous = auth.currentUser?.isAnonymous ?? false;
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 6) { toast.error(t('auth.passwordMinLength')); return; }
     setLoading(true);
     try {
-      await registerWithEmail(email, password, name);
+      if (isAnonymous) {
+        await linkAnonymousWithEmail(email, password, name);
+      } else {
+        await registerWithEmail(email, password, name);
+      }
       router.replace('/dashboard');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
@@ -65,7 +71,7 @@ export default function RegisterPage() {
             <div style={{ flex: 1, height: 1, background: FG.line }}/>
           </div>
 
-          <FButton variant="ghost" fullWidth onClick={async () => { setLoading(true); try { await loginWithGoogle(); router.replace('/dashboard'); } catch { toast.error(t('auth.googleFailed')); } finally { setLoading(false); } }}>
+          <FButton variant="ghost" fullWidth onClick={async () => { setLoading(true); try { if (isAnonymous) { await linkAnonymousWithGoogle(); } else { await loginWithGoogle(); } router.replace('/dashboard'); } catch { toast.error(t('auth.googleFailed')); } finally { setLoading(false); } }}>
             <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.8h5.35c-.5 2.4-2.55 3.8-5.35 3.8-3.2 0-5.8-2.6-5.8-5.7s2.6-5.7 5.8-5.7c1.45 0 2.75.5 3.75 1.45l2.7-2.7C16.85 4.4 14.6 3.5 12 3.5 7 3.5 3 7.5 3 12.5S7 21.5 12 21.5c5.2 0 8.6-3.65 8.6-8.8 0-.55-.05-1.1-.25-1.6z"/></svg>
             {t('auth.continueWithGoogle')}
           </FButton>

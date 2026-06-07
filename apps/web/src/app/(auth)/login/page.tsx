@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { loginWithEmail, loginWithGoogle } from '@forge/common';
+import { loginWithEmail, loginWithGoogle, signInAnonymousUser } from '@forge/common';
 import { ForgeLogo, FButton, FG } from '@/components/ui';
 
 export default function LoginPage() {
@@ -35,6 +35,18 @@ export default function LoginPage() {
       router.replace('/dashboard');
     } catch {
       toast.error(t('auth.googleFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGuest() {
+    setLoading(true);
+    try {
+      await signInAnonymousUser();
+      router.replace('/dashboard');
+    } catch {
+      toast.error(t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -101,6 +113,14 @@ export default function LoginPage() {
               {t('auth.register')}
             </Link>
           </div>
+
+          <button
+            onClick={handleGuest}
+            disabled={loading}
+            style={{ marginTop: 12, width: '100%', background: 'none', border: 'none', cursor: 'pointer', color: FG.dim, fontSize: 13, padding: '8px 0' }}
+          >
+            {t('auth.continueAsGuest')} →
+          </button>
         </div>
       </div>
     </div>

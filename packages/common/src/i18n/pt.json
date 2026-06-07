@@ -58,7 +58,15 @@
     "googleFailed": "Falha no login com Google",
     "registerFailed": "Falha no cadastro",
     "registerHeading": "Comece sua jornada",
-    "registerSubtitle": "Feito para quem treina natural."
+    "registerSubtitle": "Feito para quem treina natural.",
+    "continueAsGuest": "Continuar sem conta",
+    "guestBanner": "Modo visitante — os dados podem ser perdidos se desinstalar",
+    "saveProgress": "Salvar progresso",
+    "linkHeading": "Não perca seus dados",
+    "linkSubtitle": "Crie uma conta para sincronizar entre dispositivos e manter seu histórico seguro.",
+    "linkingAccount": "Vinculando conta…",
+    "linkingFailed": "Falha ao vincular conta",
+    "linkSuccess": "Conta salva!"
   },
   "onboarding": {
     "step": "Passo {{current}} / {{total}}",
